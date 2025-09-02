@@ -1,0 +1,38 @@
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: bdm
+      POSTGRES_PASSWORD: bdm
+      POSTGRES_DB: bdm
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  backend:
+    build: ./bdm-backend
+    environment:
+      BDM_DATABASE_URL: postgresql+asyncpg://bdm:bdm@db:5432/bdm
+      BDM_TD_THRESHOLD_BPS: 30
+      BDM_TE_WINDOW_DAYS: 30
+      BDM_TE_THRESHOLD_BPS: 50
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+  frontend:
+    working_dir: /app
+    image: node:18-alpine
+    command: sh -c "npm i && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./bdm-frontend:/app
+    environment:
+      - VITE_BDM_API_URL=http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
